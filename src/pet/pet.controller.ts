@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Post, Put } from '@nestjs/common';
 import CreatePetControllerInput from './dtos/create.pet.controller.input';
 import CreatePetUseCaseOutput from './usecases/dtos/create.pet.usecases.output';
 import CreatePetUseCaseInput from './usecases/dtos/create.pet.usecases.input';
@@ -7,6 +7,9 @@ import { IUseCase } from 'src/domain/iusecase.interface';
 import GetPetByIdUseCaseInput from './usecases/dtos/get.pet.by.id.usecase.input';
 import GetPetByIdUseCaseOutput from './usecases/dtos/get.pet.by.id.usecase.output';
 import { ConnectionStates } from 'mongoose';
+import UpdatePetControllerInput from './dtos/update.pet.controller.input';
+import UpdatePetByIdUseCaseInput from './usecases/dtos/update.pet.by.id.usecase.input';
+import UpdatePetByIdUseCaseOutput from './usecases/dtos/update.pet.by.id.usecase.output';
 
 @Controller('pet')
 export class PetController {
@@ -17,6 +20,9 @@ export class PetController {
     @Inject(PetTokens.getPetByIdUseCase)
     private readonly getPetByIdUseCase: IUseCase<GetPetByIdUseCaseInput, GetPetByIdUseCaseOutput>
 
+    @Inject(PetTokens.updatePetByIdUseCase)
+    private readonly updatePetByIdUseCase: IUseCase<UpdatePetByIdUseCaseInput, UpdatePetByIdUseCaseOutput>
+
     @Post()
     async createPet(@Body() input: CreatePetControllerInput):
         Promise<CreatePetUseCaseOutput> {
@@ -24,8 +30,9 @@ export class PetController {
         return await this.createPetUseCase.run(useCaseInput)
     }
 
-    @Get(':id')   //isso ele vai montar o complemento /id no endpoint
-    async getPetById(@Param('id') id: string): Promise<GetPetByIdUseCaseOutput> {
+    @Get(':id')   //isso ele vai montar o complemento /<id> no endpoint
+    async getPetById(@Param('id') id: string):
+        Promise<GetPetByIdUseCaseOutput> {
         try {
             const useCaseInput = new GetPetByIdUseCaseInput({ id });
             return await this.getPetByIdUseCase.run(useCaseInput)
@@ -34,6 +41,13 @@ export class PetController {
             //o error.messaga aqui vai retornar a mensagem customizad em pet.not.found.error.ts  vide a validação if (pet === null) em usecases
             throw new BadRequestException(JSON.parse(error.message))
         }
+    }
+
+    @Put(':id')
+    async updatePet(@Body() input: UpdatePetControllerInput, @Param('id') id: string):
+        Promise<UpdatePetByIdUseCaseOutput> {
+        const useCaseInput = new UpdatePetByIdUseCaseInput({ ...input, id })
+        return await this.updatePetByIdUseCase.run(useCaseInput)
     }
 }
 
