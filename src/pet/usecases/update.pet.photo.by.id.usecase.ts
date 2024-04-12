@@ -1,18 +1,17 @@
-import { IUseCase } from "src/domain/iusecase.interface";
-import UpdatePetByIdPetUseCaseOutput from "./dtos/update.pet.by.id.usecase.output";
-import UpdatePetByIdUseCaseInput from "./dtos/update.pet.by.id.usecase.input";
 import { Inject, Injectable } from "@nestjs/common";
+import UpdatePetPhotoByIdUseCaseInput from "./dtos/update.pet.photo.by.id.usecase.input";
+import UpdatePetPhotoByIdUseCaseOutput from "./dtos/update.pet.photo.by.id.usecase.output";
+import { IUseCase } from "src/domain/iusecase.interface";
 import PetTokens from "../pet.tokens";
 import IPetRepository from "../interfaces/pet.reposity.interface";
-import { Pet } from "../schemas/pet.schema";
 import PetNotFoundError from "src/domain/errors/pet.not.found.error";
-import { threadId } from "worker_threads";
-import AppTokens from "src/app.tokens";
+import { Pet } from "../schemas/pet.schema";
 import IFileService from "src/interfaces/file.service.interface";
+import AppTokens from "src/app.tokens";
 
 @Injectable()
-export default class UpdatePetByIdUseCase
-    implements IUseCase<UpdatePetByIdUseCaseInput, UpdatePetByIdPetUseCaseOutput> {
+export default class UpdatePetPhotoByIdUseCase
+    implements IUseCase<UpdatePetPhotoByIdUseCaseInput, UpdatePetPhotoByIdUseCaseOutput> {
 
     constructor(
         @Inject(PetTokens.petRepository)
@@ -22,42 +21,43 @@ export default class UpdatePetByIdUseCase
         private readonly fileService: IFileService
     ) { }
 
-    async run(input: UpdatePetByIdUseCaseInput): Promise<UpdatePetByIdPetUseCaseOutput> {
 
-        let pet = await this.getPetById(input.id)
+    async run(input: UpdatePetPhotoByIdUseCaseInput):
+        Promise<UpdatePetPhotoByIdUseCaseOutput> {
 
-        //if (pet === null) é igual if (!pet)
-        if (!pet) {
+        const pet = await this.findPetById(input.id)
+
+        if (pet === null) {
+            //throw new Error('Pet Não Encontrado')   //thow faz morrer o codigo
             throw new PetNotFoundError()
         }
 
         await this.petRepository.updateById({
-            ...input,
-            _id: input.id
+            _id: input.id,
+            photo: input.photoPath,
         });
 
-        pet = await this.getPetById(input.id)
+        const photo = await this.fileService.readFile(input.photoPath);
 
-        const petPhoto = !!pet.photo ? (await this.fileService.readFile(pet.photo)).toString('base64') : null;
-
-        return new UpdatePetByIdPetUseCaseOutput({
+        return new UpdatePetPhotoByIdUseCaseOutput({
             id: pet._id,
             name: pet.name,
             type: pet.type,
             size: pet.size,
             gender: pet.gender,
             bio: pet.bio,
-            photo: petPhoto,
+            photo: photo.toString('base64'),
             createdAt: pet.createdAt,
             updatedAt: pet.updatedAt
         })
     }
 
-    private async getPetById(id: string): Promise<Pet> {
+    private async findPetById(id: string): Promise<Pet> {
         try {
             return await this.petRepository.getById(id)
         } catch (error) {
             return null
         }
     }
+
 }
